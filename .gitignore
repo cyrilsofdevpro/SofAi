@@ -1,0 +1,15 @@
+node_modules/
+frontend/node_modules/
+.venv/
+backend/.venv/
+.env
+.env.local
+*.pyc
+__pycache__/
+.vscode/
+.DS_Store
+dist/
+build/
+package-lock.json
+npm-debug.log
+.pip-wheel-metadata/
