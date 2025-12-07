@@ -79,11 +79,15 @@ async def chat(req: ChatRequest, request: Request, api_key: str = Depends(verify
     session_id = request.headers.get('x-session-id', 'default')
     ChatStore.add_message(session_id, {"role": "user", "text": req.message})
 
+    # Format prompt for Qwen chat model
+    # Qwen expects: "User: {question}\nAssistant:"
+    formatted_prompt = f"User: {req.message}\nAssistant:"
+    
     # Generate response with improved parameters for instruction-tuned models
     reply = model.generate_response(
-        req.message,
+        formatted_prompt,
         max_new_tokens=req.max_tokens,
-        temperature=0.3,  # even lower for more deterministic answers
+        temperature=0.3,  # even lower for more focused, deterministic answers
         top_p=0.7,        # even tighter nucleus sampling
     )
 
