@@ -41,7 +41,7 @@ model: Any = None
 
 class ChatRequest(BaseModel):
     message: str
-    max_tokens: int = 256
+    max_tokens: int = 150  # reduced from 256 for better quality with instruction-tuned models
 
 
 class ChatResponse(BaseModel):
@@ -79,7 +79,13 @@ async def chat(req: ChatRequest, request: Request, api_key: str = Depends(verify
     session_id = request.headers.get('x-session-id', 'default')
     ChatStore.add_message(session_id, {"role": "user", "text": req.message})
 
-    reply = model.generate_response(req.message, max_new_tokens=req.max_tokens)
+    # Generate response with improved parameters for instruction-tuned models
+    reply = model.generate_response(
+        req.message,
+        max_new_tokens=req.max_tokens,
+        temperature=0.6,  # lower temperature for more focused answers
+        top_p=0.85,       # tighter nucleus sampling
+    )
 
     ChatStore.add_message(session_id, {"role": "bot", "text": reply})
     return ChatResponse(reply=reply)
