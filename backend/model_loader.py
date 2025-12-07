@@ -130,4 +130,22 @@ class ModelWrapper:
                     text = text[:idx]
                     break
 
+        # Trim at first occurrence of common filler patterns that indicate rambling
+        filler_patterns = [
+            "\nTo ",
+            "\nI will ",
+            "\nHere's how",
+            "\nAfter ",
+            "\nSo, the answer",
+            "\nIs there anything",
+        ]
+        for pattern in filler_patterns:
+            idx = text.find(pattern)
+            if idx > 0:
+                # Only trim if we have a reasonable answer before the filler (>10 chars)
+                potential_answer = text[:idx].strip()
+                if len(potential_answer) > 10:
+                    text = potential_answer
+                    break
+
         return text.strip()
