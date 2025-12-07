@@ -75,7 +75,7 @@ class ModelWrapper:
 
         return cls(tokenizer=tokenizer, model=model, device=device)
 
-    def generate_response(self, prompt: str, max_new_tokens: int = 100, do_sample: bool = True, temperature: float = 0.6, top_p: float = 0.85, stop_tokens: Optional[list] = None, **gen_kwargs) -> str:
+    def generate_response(self, prompt: str, max_new_tokens: int = 100, do_sample: bool = True, temperature: float = 0.5, top_p: float = 0.8, stop_tokens: Optional[list] = None, **gen_kwargs) -> str:
         """Generate a response string for a given prompt with improved quality settings.
 
         This method keeps the implementation simple but avoids returning the prompt
@@ -84,8 +84,8 @@ class ModelWrapper:
         
         Tuned defaults for instruction-tuned models (Qwen, etc):
         - max_new_tokens=100: Shorter, focused answers (avoid rambling)
-        - temperature=0.6: More deterministic, focused responses
-        - top_p=0.85: Tighter nucleus sampling for coherence without loss of diversity
+        - temperature=0.5: More deterministic, focused responses
+        - top_p=0.8: Very tight nucleus sampling for coherence and directness
         """
         if self.tokenizer is None or self.model is None:
             raise RuntimeError("ModelWrapper is not properly initialized")
@@ -130,7 +130,7 @@ class ModelWrapper:
                     text = text[:idx]
                     break
 
-        # Trim at first occurrence of common filler patterns that indicate rambling
+        # Trim at first occurrence of common filler/wiki-style patterns
         filler_patterns = [
             "\nTo ",
             "\nI will ",
@@ -138,13 +138,21 @@ class ModelWrapper:
             "\nAfter ",
             "\nSo, the answer",
             "\nIs there anything",
+            "\nAnswers",  # wiki-style
+            "\nWiki User",  # wiki-style
+            "\nStudy now",  # wiki-style
+            "\nBest Answer",  # wiki-style
+            "\n∙",  # bullet point wiki format
+            "\n-",  # dash separator
+            "\nIn the play,",  # unwanted context
+            "\nAnswer:",  # explicit answer label (trim before this)
         ]
         for pattern in filler_patterns:
             idx = text.find(pattern)
             if idx > 0:
-                # Only trim if we have a reasonable answer before the filler (>10 chars)
+                # Only trim if we have a reasonable answer before the filler (>5 chars)
                 potential_answer = text[:idx].strip()
-                if len(potential_answer) > 10:
+                if len(potential_answer) > 5:
                     text = potential_answer
                     break
 
