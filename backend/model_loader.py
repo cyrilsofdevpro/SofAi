@@ -75,12 +75,17 @@ class ModelWrapper:
 
         return cls(tokenizer=tokenizer, model=model, device=device)
 
-    def generate_response(self, prompt: str, max_new_tokens: int = 256, do_sample: bool = True, temperature: float = 0.7, top_p: float = 0.95, stop_tokens: Optional[list] = None, **gen_kwargs) -> str:
-        """Generate a response string for a given prompt.
+    def generate_response(self, prompt: str, max_new_tokens: int = 80, do_sample: bool = True, temperature: float = 0.7, top_p: float = 0.9, stop_tokens: Optional[list] = None, **gen_kwargs) -> str:
+        """Generate a response string for a given prompt with improved quality settings.
 
         This method keeps the implementation simple but avoids returning the prompt
         concatenated with the model output by removing the input prompt from the
         decoded text when possible.
+        
+        Better defaults for gpt2:
+        - max_new_tokens=80: Shorter, more coherent responses (avoid repetition loops)
+        - temperature=0.7: Balanced creativity and coherence
+        - top_p=0.9: Nucleus sampling for diversity without gibberish
         """
         if self.tokenizer is None or self.model is None:
             raise RuntimeError("ModelWrapper is not properly initialized")
@@ -97,6 +102,7 @@ class ModelWrapper:
             do_sample=do_sample,
             temperature=temperature,
             top_p=top_p,
+            pad_token_id=self.tokenizer.eos_token_id,
         )
         generate_params.update(gen_kwargs)
 
