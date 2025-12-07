@@ -131,29 +131,34 @@ class ModelWrapper:
                     break
 
         # Trim at first occurrence of common filler/wiki-style patterns
-        filler_patterns = [
-            "\nTo ",
-            "\nI will ",
-            "\nHere's how",
-            "\nAfter ",
-            "\nSo, the answer",
-            "\nIs there anything",
-            "\nAnswers",  # wiki-style
-            "\nWiki User",  # wiki-style
-            "\nStudy now",  # wiki-style
-            "\nBest Answer",  # wiki-style
-            "\n∙",  # bullet point wiki format
-            "\n-",  # dash separator
-            "\nIn the play,",  # unwanted context
-            "\nAnswer:",  # explicit answer label (trim before this)
-        ]
-        for pattern in filler_patterns:
-            idx = text.find(pattern)
-            if idx > 0:
-                # Only trim if we have a reasonable answer before the filler (>5 chars)
-                potential_answer = text[:idx].strip()
-                if len(potential_answer) > 5:
-                    text = potential_answer
-                    break
+        if text and isinstance(text, str):
+            filler_patterns = [
+                "\nTo ",
+                "\nI will ",
+                "\nHere's how",
+                "\nAfter ",
+                "\nSo, the answer",
+                "\nIs there anything",
+                "\nAnswers",  # wiki-style
+                "\nWiki User",  # wiki-style
+                "\nStudy now",  # wiki-style
+                "\nBest Answer",  # wiki-style
+                "\n∙",  # bullet point wiki format
+                "\n-",  # dash separator
+                "\nIn the play,",  # unwanted context
+                "\nAnswer:",  # explicit answer label (trim before this)
+            ]
+            for pattern in filler_patterns:
+                try:
+                    idx = text.find(pattern)
+                    if idx > 0:
+                        # Only trim if we have a reasonable answer before the filler (>5 chars)
+                        potential_answer = text[:idx].strip()
+                        if len(potential_answer) > 5:
+                            text = potential_answer
+                            break
+                except Exception:
+                    # If any error in trimming, keep original text
+                    pass
 
-        return text.strip()
+        return text.strip() if text else ""
