@@ -75,17 +75,17 @@ class ModelWrapper:
 
         return cls(tokenizer=tokenizer, model=model, device=device)
 
-    def generate_response(self, prompt: str, max_new_tokens: int = 100, do_sample: bool = True, temperature: float = 0.5, top_p: float = 0.8, stop_tokens: Optional[list] = None, **gen_kwargs) -> str:
+    def generate_response(self, prompt: str, max_new_tokens: int = 80, do_sample: bool = True, temperature: float = 0.3, top_p: float = 0.7, stop_tokens: Optional[list] = None, **gen_kwargs) -> str:
         """Generate a response string for a given prompt with improved quality settings.
 
         This method keeps the implementation simple but avoids returning the prompt
         concatenated with the model output by removing the input prompt from the
         decoded text when possible.
         
-        Tuned defaults for instruction-tuned models (Qwen, etc):
-        - max_new_tokens=100: Shorter, focused answers (avoid rambling)
-        - temperature=0.5: More deterministic, focused responses
-        - top_p=0.8: Very tight nucleus sampling for coherence and directness
+        Ultra-tuned defaults for focused, direct answers:
+        - max_new_tokens=80: Very short, direct answers only
+        - temperature=0.3: Highly deterministic, minimal rambling
+        - top_p=0.7: Very tight nucleus sampling for consistency
         """
         if self.tokenizer is None or self.model is None:
             raise RuntimeError("ModelWrapper is not properly initialized")

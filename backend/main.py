@@ -41,7 +41,7 @@ model: Any = None
 
 class ChatRequest(BaseModel):
     message: str
-    max_tokens: int = 100  # further reduced for concise answers
+    max_tokens: int = 80  # even shorter for focused answers
 
 
 class ChatResponse(BaseModel):
@@ -83,8 +83,8 @@ async def chat(req: ChatRequest, request: Request, api_key: str = Depends(verify
     reply = model.generate_response(
         req.message,
         max_new_tokens=req.max_tokens,
-        temperature=0.5,  # even lower for more focused, deterministic answers
-        top_p=0.8,        # even tighter nucleus sampling
+        temperature=0.3,  # even lower for more deterministic answers
+        top_p=0.7,        # even tighter nucleus sampling
     )
 
     ChatStore.add_message(session_id, {"role": "bot", "text": reply})
