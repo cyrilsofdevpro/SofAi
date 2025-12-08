@@ -1,15 +1,20 @@
 // Replaced: all chat API calls now use a single backend endpoint which returns JSON { reply: string }
 // IMPORTANT: this uses the public ngrok URL you provided. Change it if your tunnel changes.
 export async function sendMessage(message) {
-  const response = await fetch("https://cliquish-unsaluted-pablo.ngrok-free.dev/predict", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
+  // Use the public ngrok URL you provided as the single backend endpoint.
+  const url = 'https://cliquish-unsaluted-pablo.ngrok-free.dev/predict';
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ message })
   });
 
-  const data = await response.json();
+  if (!res.ok) {
+    throw new Error(`Request to ${url} failed: ${res.status} ${res.statusText}`);
+  }
+
+  const data = await res.json();
+  if (!data || typeof data.reply !== 'string') throw new Error('Invalid response from backend');
   return data.reply;
 }
 
