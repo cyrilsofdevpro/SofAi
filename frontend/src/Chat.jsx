@@ -1,53 +1,142 @@
-import React, {useState, useEffect, useRef} from 'react';
-import {sendMessage, getHistory, getApiBase} from './api';
+import { useState, useRef, useEffect } from 'react';
+import { sendMessage } from './api';
+import './Chat.css';
 
-export default function Chat(){
-  const [messages, setMessages] = useState([])
-  const [text, setText] = useState('')
-  const [loading, setLoading] = useState(false)
-  const scrollRef = useRef(null)
+export default function Chat() {
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const messagesEndRef = useRef(null);
 
-  useEffect(()=>{
-    let mounted = true
-    getHistory().then(data=>{
-      if(!mounted) return
-      if(data && data.messages) setMessages(data.messages)
-    }).catch(()=>{})
-    return ()=>{ mounted = false }
-  }, [])
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
 
-  useEffect(()=>{
-    if(scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
-  }, [messages])
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
-  const onSend = async () =>{
-    if(!text) return
-    const userMsg = {role:'user', text}
-    setMessages(m=>[...m, userMsg])
-    setText('')
-    setLoading(true)
-    try{
-      const res = await sendMessage(text)
-      const botText = res?.reply ?? '[no reply]'
-      setMessages(m=>[...m, {role:'bot', text:botText}])
-    }catch(e){
-      setMessages(m=>[...m, {role:'bot', text:'Error: '+(e.message || e)}])
-    }finally{
-      setLoading(false)
+  const handleSend = async () => {
+    if (!input.trim()) return;
+
+    const userMessage = input;
+    setInput('');
+    setMessages(prev => [...prev, { role: 'user', text: userMessage }]);
+    setLoading(true);
+
+    try {
+      const response = await sendMessage(userMessage);
+      setMessages(prev => [...prev, { role: 'assistant', text: response.reply }]);
+    } catch (error) {
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        text: '❌ Error: Unable to connect to the backend. Make sure the Colab notebook is running.' 
+      }]);
+    } finally {
+      setLoading(false);
     }
-  }
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
 
   return (
-    <div>
-      <div ref={scrollRef} style={{height:360, overflow:'auto', border:'1px solid #eee', padding:8, marginBottom:8}}>
-        {messages.map((m, i)=>(
-          <div key={i} style={{margin:6, textAlign: m.role==='user'? 'right':'left'}}>
-            <div style={{display:'inline-block', background: m.role==='user'? '#007bff':'#f1f1f1', color: m.role==='user'? '#fff':'#000', padding:8, borderRadius:6}}>{m.text}</div>
+    <div className="chat-container">
+      {/* Header */}
+      <div className="chat-header">
+        <div className="header-content">
+          <h1>SofAi</h1>
+          <p className="subtitle">Your AI Assistant</p>
+        </div>
+      </div>
+
+      {/* Messages Area */}
+      <div className="messages-container">
+        {messages.length === 0 && (
+          <div className="welcome-section">
+            <div className="welcome-icon">✨</div>
+            <h2>What can I help you with?</h2>
+            <p>Ask me anything, and I'll do my best to help!</p>
+            <div className="quick-prompts">
+              <button onClick={() => setInput('What is machine learning?')} className="prompt-btn">
+                <span className="prompt-icon">🤖</span>
+                <span>Machine Learning</span>
+              </button>
+              <button onClick={() => setInput('What is the capital of France?')} className="prompt-btn">
+                <span className="prompt-icon">🗺️</span>
+                <span>Geography</span>
+              </button>
+              <button onClick={() => setInput('Explain quantum computing')} className="prompt-btn">
+                <span className="prompt-icon">⚛️</span>
+                <span>Quantum Computing</span>
+              </button>
+              <button onClick={() => setInput('Tell me a joke')} className="prompt-btn">
+                <span className="prompt-icon">😄</span>
+                <span>Make me Laugh</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {messages.map((msg, idx) => (
+          <div key={idx} className={`message ${msg.role}`}>
+            <div className="message-avatar">
+              {msg.role === 'user' ? '👤' : '🤖'}
+            </div>
+            <div className="message-content">
+              <div className="message-text">{msg.text}</div>
+            </div>
           </div>
         ))}
+
+        {loading && (
+          <div className="message assistant">
+            <div className="message-avatar">🤖</div>
+            <div className="message-content">
+              <div className="typing-indicator">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div ref={messagesEndRef} />
       </div>
-      <div style={{display:'flex', gap:8}}>
-        <input value={text} onChange={e=>setText(e.target.value)} style={{flex:1, padding:8}} placeholder='Type a message' onKeyDown={e=>{ if(e.key==='Enter') onSend() }} />
+
+      {/* Input Area */}
+      <div className="input-section">
+        <div className="input-wrapper">
+          <textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder="Ask me anything..."
+            disabled={loading}
+            className="message-input"
+          />
+          <button
+            onClick={handleSend}
+            disabled={loading || !input.trim()}
+            className="send-button"
+          >
+            {loading ? (
+              <span className="spinner">⟳</span>
+            ) : (
+              <span>➤</span>
+            )}
+          </button>
+        </div>
+        <p className="footer-text">SofAi v1.0 • Powered by Qwen AI</p>
+      </div>
+    </div>
+  );
+}
         <button onClick={onSend} disabled={loading} style={{padding:'8px 12px'}}>{loading? '...' : 'Send'}</button>
       </div>
       <div style={{marginTop:8, fontSize:12, color:'#666'}}>

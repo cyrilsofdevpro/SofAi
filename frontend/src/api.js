@@ -1,7 +1,8 @@
 import axios from 'axios';
 
-// Default to your ngrok URL if VITE_API_BASE isn't set in the environment.
-const DEFAULT_BASE = 'https://cliquish-unsaluted-pablo.ngrok-free.dev';
+// IMPORTANT: Replace this with your Colab ngrok URL!
+// Copy the public URL from your Colab notebook output (e.g., https://abc123.ngrok-free.dev)
+const DEFAULT_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:8000';
 const API_BASE = import.meta.env.VITE_API_BASE || DEFAULT_BASE;
 
 function getSessionId() {
@@ -18,8 +19,8 @@ export async function sendMessage(message){
   const headers = { 'x-session-id': sessionId, 'x-api-key': import.meta.env.VITE_API_KEY || '' };
   const payload = { message, max_tokens: 256 };
 
-  // Try common endpoint variants: /api/chat (Colab/Flask) then /chat (FastAPI)
-  const candidates = [`${API_BASE}/api/chat`, `${API_BASE}/chat`];
+  // Try common endpoint variants: /chat (FastAPI) first, then /api/chat (Colab/Flask)
+  const candidates = [`${API_BASE}/chat`, `${API_BASE}/api/chat`];
   let lastErr = null;
   for(const url of candidates){
     try{
