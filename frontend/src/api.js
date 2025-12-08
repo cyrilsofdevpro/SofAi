@@ -1,58 +1,21 @@
-import axios from 'axios';
+// Replaced: all chat API calls now use a single backend endpoint which returns JSON { reply: string }
+// IMPORTANT: this uses the public ngrok URL you provided. Change it if your tunnel changes.
+export async function sendMessage(message) {
+  const response = await fetch("https://cliquish-unsaluted-pablo.ngrok-free.dev/predict", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ message })
+  });
 
-// IMPORTANT: Replace this with your Colab ngrok URL!
-// Copy the public URL from your Colab notebook output (e.g., https://abc123.ngrok-free.dev)
-const DEFAULT_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:8000';
-const API_BASE = import.meta.env.VITE_API_BASE || DEFAULT_BASE;
-
-function getSessionId() {
-  let sid = localStorage.getItem('sofai_session_id');
-  if (!sid) {
-    sid = 'sess-' + Math.random().toString(36).slice(2, 10);
-    localStorage.setItem('sofai_session_id', sid);
-  }
-  return sid;
+  const data = await response.json();
+  return data.reply;
 }
 
-export async function sendMessage(message){
-  const sessionId = getSessionId();
-  const headers = { 'x-session-id': sessionId, 'x-api-key': import.meta.env.VITE_API_KEY || '' };
-  const payload = { message, max_tokens: 256 };
-
-  // Try common endpoint variants: /chat (FastAPI) first, then /api/chat (Colab/Flask)
-  const candidates = [`${API_BASE}/chat`, `${API_BASE}/api/chat`];
-  let lastErr = null;
-  for(const url of candidates){
-    try{
-      const res = await axios.post(url, payload, { headers });
-      return res.data;
-    }catch(err){
-      lastErr = err;
-      // if 404 try next, otherwise break and throw
-      if(err.response && err.response.status === 404){
-        continue;
-      }
-      // network error or other -> continue to try next candidate
-    }
-  }
-  // If we reach here, throw the last error for upstream handling
-  throw lastErr;
-}
-
+// Keep a minimal getHistory/getApiBase in case other parts expect them. They now return defaults.
 export async function getHistory(){
-  const sessionId = getSessionId();
-  const candidates = [`${API_BASE}/history`, `${API_BASE}/history`];
-  // same endpoint for both patterns, keep for symmetry or future changes
-  for(const url of candidates){
-    try{
-      const res = await axios.get(url, { params: { session_id: sessionId } });
-      return res.data;
-    }catch(err){
-      // try next
-      continue;
-    }
-  }
-  return { session_id: sessionId, messages: [] };
+  return { session_id: 'local', messages: [] };
 }
 
-export function getApiBase(){ return API_BASE }
+export function getApiBase(){ return 'https://cliquish-unsaluted-pablo.ngrok-free.dev' }

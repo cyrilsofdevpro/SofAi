@@ -27,8 +27,7 @@ export default function Chat(){
     setText('')
     setLoading(true)
     try{
-      const res = await sendMessage(text)
-      const botText = res?.reply ?? '[no reply]'
+      const botText = await sendMessage(text)
       setMessages(m=>[...m, {role:'bot', text:botText}])
     }catch(e){
       setMessages(m=>[...m, {role:'bot', text:'Error: '+(e.message || e)}])

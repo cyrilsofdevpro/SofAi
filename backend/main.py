@@ -79,10 +79,19 @@ async def chat(req: ChatRequest, request: Request, api_key: str = Depends(verify
     session_id = request.headers.get('x-session-id', 'default')
     ChatStore.add_message(session_id, {"role": "user", "text": req.message})
 
+    # Shortcut canned responses for simple, common questions to avoid unnecessary model calls
+    raw = (req.message or '').strip()
+    normalized = ''.join(ch for ch in raw.lower() if ch.isalnum() or ch.isspace()).strip()
+    if normalized:
+        if 'who are you' in normalized or 'what is your name' in normalized or normalized == 'whoami':
+            canned = 'I am SofAi, created by the Sofdev Team'
+            ChatStore.add_message(session_id, {"role": "bot", "text": canned})
+            return ChatResponse(reply=canned)
+
     # Format prompt for Qwen chat model
     # Qwen expects: "User: {question}\nAssistant:"
     formatted_prompt = f"User: {req.message}\nAssistant:"
-    
+
     # Generate response with improved parameters for instruction-tuned models
     reply = model.generate_response(
         formatted_prompt,
@@ -93,6 +102,39 @@ async def chat(req: ChatRequest, request: Request, api_key: str = Depends(verify
 
     ChatStore.add_message(session_id, {"role": "bot", "text": reply})
     return ChatResponse(reply=reply)
+
+
+@app.post("/predict")
+async def predict(req: ChatRequest, request: Request):
+    """Lightweight prediction endpoint for simple frontends and ngrok tunnels.
+    This endpoint intentionally does not require API key authentication (meant for local testing).
+    It returns JSON {"reply": str} so simple clients can consume it.
+    """
+    if model is None:
+        raise HTTPException(status_code=503, detail="Model not loaded")
+
+    session_id = request.headers.get('x-session-id', 'default')
+    ChatStore.add_message(session_id, {"role": "user", "text": req.message})
+
+    # reuse the same canned-response logic used by /chat
+    raw = (req.message or '').strip()
+    normalized = ''.join(ch for ch in raw.lower() if ch.isalnum() or ch.isspace()).strip()
+    if normalized:
+        if 'who are you' in normalized or 'what is your name' in normalized or normalized == 'whoami':
+            canned = 'I am SofAi, created by the Sofdev Team'
+            ChatStore.add_message(session_id, {"role": "bot", "text": canned})
+            return {"reply": canned}
+
+    formatted_prompt = f"User: {req.message}\nAssistant:"
+    reply = model.generate_response(
+        formatted_prompt,
+        max_new_tokens=req.max_tokens,
+        temperature=0.3,
+        top_p=0.7,
+    )
+
+    ChatStore.add_message(session_id, {"role": "bot", "text": reply})
+    return {"reply": reply}
 
 
 

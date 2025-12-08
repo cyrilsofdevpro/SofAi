@@ -25,12 +25,12 @@ export default function Chat() {
     setLoading(true);
 
     try {
-      const response = await sendMessage(userMessage);
-      setMessages(prev => [...prev, { role: 'assistant', text: response.reply }]);
+      const botReply = await sendMessage(userMessage);
+      setMessages(prev => [...prev, { role: 'assistant', text: botReply }]);
     } catch (error) {
-      setMessages(prev => [...prev, { 
-        role: 'assistant', 
-        text: '❌ Error: Unable to connect to the backend. Make sure the Colab notebook is running.' 
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        text: '❌ Error: Unable to connect to the backend. Make sure the Colab notebook is running.'
       }]);
     } finally {
       setLoading(false);
@@ -132,16 +132,8 @@ export default function Chat() {
             )}
           </button>
         </div>
-        <p className="footer-text">SofAi v1.0 • Powered by Qwen AI</p>
+        <p className="footer-text">SofAi v2.0</p>
       </div>
     </div>
   );
-}
-        <button onClick={onSend} disabled={loading} style={{padding:'8px 12px'}}>{loading? '...' : 'Send'}</button>
-      </div>
-      <div style={{marginTop:8, fontSize:12, color:'#666'}}>
-        API: {getApiBase()}
-      </div>
-    </div>
-  )
 }
