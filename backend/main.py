@@ -48,6 +48,33 @@ class ChatResponse(BaseModel):
     reply: str
 
 
+def _is_identity_question(text: str) -> bool:
+    """Return True if the user is asking who/what the assistant is (any phrasing about SofAi/identity).
+    This centralizes identity detection so we always return the canned SofAi reply for those queries.
+    """
+    if not text:
+        return False
+    normalized = ''.join(ch for ch in text.lower() if ch.isalnum() or ch.isspace()).strip()
+    if not normalized:
+        return False
+
+    # exact phrase matches
+    patterns = [
+        'who are you', 'what is your name', 'whoami',
+        'who is sofai', 'what is sofai', 'who created you', 'who made you',
+        'who made sofai', 'who invented you', 'what are you', 'what is your purpose'
+    ]
+    for p in patterns:
+        if p in normalized:
+            return True
+
+    # generic fallback: presence of 'sofai' together with a question word
+    if 'sofai' in normalized and any(q in normalized for q in ('who', 'what', 'creator', 'made')):
+        return True
+
+    return False
+
+
 @app.on_event("startup")
 async def startup_event():
     global model
@@ -80,13 +107,11 @@ async def chat(req: ChatRequest, request: Request, api_key: str = Depends(verify
     ChatStore.add_message(session_id, {"role": "user", "text": req.message})
 
     # Shortcut canned responses for simple, common questions to avoid unnecessary model calls
-    raw = (req.message or '').strip()
-    normalized = ''.join(ch for ch in raw.lower() if ch.isalnum() or ch.isspace()).strip()
-    if normalized:
-        if 'who are you' in normalized or 'what is your name' in normalized or normalized == 'whoami':
-            canned = 'I am SofAi, created by the Sofdev Team'
-            ChatStore.add_message(session_id, {"role": "bot", "text": canned})
-            return ChatResponse(reply=canned)
+    # If the user asks about the assistant's identity, return the canned SofAi reply
+    if _is_identity_question(req.message):
+        canned = 'I am SofAi, created by the Sofdev Team'
+        ChatStore.add_message(session_id, {"role": "bot", "text": canned})
+        return ChatResponse(reply=canned)
 
     # Format prompt for Qwen chat model
     # Qwen expects: "User: {question}\nAssistant:"
@@ -117,13 +142,11 @@ async def predict(req: ChatRequest, request: Request):
     ChatStore.add_message(session_id, {"role": "user", "text": req.message})
 
     # reuse the same canned-response logic used by /chat
-    raw = (req.message or '').strip()
-    normalized = ''.join(ch for ch in raw.lower() if ch.isalnum() or ch.isspace()).strip()
-    if normalized:
-        if 'who are you' in normalized or 'what is your name' in normalized or normalized == 'whoami':
-            canned = 'I am SofAi, created by the Sofdev Team'
-            ChatStore.add_message(session_id, {"role": "bot", "text": canned})
-            return {"reply": canned}
+    # If the user asks about the assistant's identity, return the canned SofAi reply
+    if _is_identity_question(req.message):
+        canned = 'I am SofAi, created by the Sofdev Team'
+        ChatStore.add_message(session_id, {"role": "bot", "text": canned})
+        return {"reply": canned}
 
     formatted_prompt = f"User: {req.message}\nAssistant:"
     reply = model.generate_response(
