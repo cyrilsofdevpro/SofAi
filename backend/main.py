@@ -41,8 +41,8 @@ models: dict = {}
 
 class ChatRequest(BaseModel):
     message: str
-    max_tokens: int = 80  # even shorter for focused answers
-    model: str = "qwen"  # default to qwen, can be "qwen" or "tinyllama"
+    max_tokens: int = 256  # increased for longer, complete responses like ChatGPT
+    model: str = "qwen"  # default to qwen, can be "qwen" or "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
 
 
 class ChatResponse(BaseModel):
@@ -118,9 +118,13 @@ async def chat(req: ChatRequest, request: Request, api_key: str = Depends(verify
         ChatStore.add_message(session_id, {"role": "bot", "text": canned})
         return ChatResponse(reply=canned)
 
-    # Format prompt for Qwen chat model
-    # Qwen expects: "User: {question}\nAssistant:"
-    formatted_prompt = f"User: {req.message}\nAssistant:"
+    # Format prompt based on the selected model
+    if req.model == "qwen":
+        formatted_prompt = f"User: {req.message}\nAssistant:"
+    elif req.model == "TinyLlama/TinyLlama-1.1B-Chat-v1.0":
+        formatted_prompt = f"<|user|>\n{req.message}\n<|assistant|>\n"
+    else:
+        formatted_prompt = f"User: {req.message}\nAssistant:"  # fallback
 
     # Generate response with improved parameters for instruction-tuned models
     reply = selected_model.generate_response(
@@ -154,7 +158,13 @@ async def predict(req: ChatRequest, request: Request):
         ChatStore.add_message(session_id, {"role": "bot", "text": canned})
         return {"reply": canned}
 
-    formatted_prompt = f"User: {req.message}\nAssistant:"
+    # Format prompt based on the selected model
+    if req.model == "qwen":
+        formatted_prompt = f"User: {req.message}\nAssistant:"
+    elif req.model == "TinyLlama/TinyLlama-1.1B-Chat-v1.0":
+        formatted_prompt = f"<|user|>\n{req.message}\n<|assistant|>\n"
+    else:
+        formatted_prompt = f"User: {req.message}\nAssistant:"  # fallback
     reply = selected_model.generate_response(
         formatted_prompt,
         max_new_tokens=req.max_tokens,
