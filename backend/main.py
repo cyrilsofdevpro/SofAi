@@ -136,6 +136,24 @@ async def chat(req: ChatRequest, request: Request, api_key: str = Depends(verify
         do_sample=True,   # enable sampling for creativity
     )
 
+    # Auto-switch model if response is too short for better quality
+    if len(reply.strip()) < 200 and req.model in models:
+        other_model_key = "TinyLlama/TinyLlama-1.1B-Chat-v1.0" if req.model == "qwen" else "qwen"
+        if other_model_key in models:
+            other_model = models[other_model_key]
+            # Reformat prompt for other model
+            if other_model_key == "qwen":
+                formatted_prompt = f"System: {system_prompt}\nUser: {req.message}\nAssistant:"
+            else:
+                formatted_prompt = f"<|system|>\n{system_prompt}\n<|user|>\n{req.message}\n<|assistant|>\n"
+            reply = other_model.generate_response(
+                formatted_prompt,
+                max_new_tokens=req.max_tokens,
+                temperature=0.7,
+                top_p=0.95,
+                do_sample=True,
+            )
+
     ChatStore.add_message(session_id, {"role": "bot", "text": reply})
     return ChatResponse(reply=reply)
 
@@ -175,6 +193,24 @@ async def predict(req: ChatRequest, request: Request):
         top_p=0.95,
         do_sample=True,
     )
+
+    # Auto-switch model if response is too short for better quality
+    if len(reply.strip()) < 200 and req.model in models:
+        other_model_key = "TinyLlama/TinyLlama-1.1B-Chat-v1.0" if req.model == "qwen" else "qwen"
+        if other_model_key in models:
+            other_model = models[other_model_key]
+            # Reformat prompt for other model
+            if other_model_key == "qwen":
+                formatted_prompt = f"System: {system_prompt}\nUser: {req.message}\nAssistant:"
+            else:
+                formatted_prompt = f"<|system|>\n{system_prompt}\n<|user|>\n{req.message}\n<|assistant|>\n"
+            reply = other_model.generate_response(
+                formatted_prompt,
+                max_new_tokens=req.max_tokens,
+                temperature=0.7,
+                top_p=0.95,
+                do_sample=True,
+            )
 
     ChatStore.add_message(session_id, {"role": "bot", "text": reply})
     return {"reply": reply}
