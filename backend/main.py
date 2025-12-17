@@ -119,7 +119,7 @@ async def chat(req: ChatRequest, request: Request, api_key: str = Depends(verify
         return ChatResponse(reply=canned)
 
     # Format prompt based on the selected model
-    system_prompt = "You are a helpful AI assistant like ChatGPT. Provide detailed, accurate, and comprehensive responses."
+    system_prompt = """You are a helpful AI assistant like ChatGPT. Provide detailed, accurate, and comprehensive responses. Structure your answers with clear sections, bullet points, numbered lists, and explanations when appropriate. Use engaging language, and offer follow-up suggestions or additional help when relevant."""
     if req.model == "qwen":
         formatted_prompt = f"System: {system_prompt}\nUser: {req.message}\nAssistant:"
     elif req.model == "TinyLlama/TinyLlama-1.1B-Chat-v1.0":
@@ -161,7 +161,7 @@ async def predict(req: ChatRequest, request: Request):
         return {"reply": canned}
 
     # Format prompt based on the selected model
-    system_prompt = "You are a helpful AI assistant like ChatGPT. Provide detailed, accurate, and comprehensive responses."
+    system_prompt = """You are a helpful AI assistant like ChatGPT. Provide detailed, accurate, and comprehensive responses. Structure your answers with clear sections, bullet points, numbered lists, and explanations when appropriate. Use engaging language, and offer follow-up suggestions or additional help when relevant."""
     if req.model == "qwen":
         formatted_prompt = f"System: {system_prompt}\nUser: {req.message}\nAssistant:"
     elif req.model == "TinyLlama/TinyLlama-1.1B-Chat-v1.0":
