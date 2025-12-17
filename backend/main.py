@@ -162,7 +162,7 @@ async def chat(req: ChatRequest, request: Request, api_key: str = Depends(verify
 async def predict(req: ChatRequest, request: Request):
     """Lightweight prediction endpoint for simple frontends and ngrok tunnels.
     This endpoint intentionally does not require API key authentication (meant for local testing).
-    It returns JSON {"reply": str} so simple clients can consume it.
+    It returns JSON {"reply": str, "model_used": str} so simple clients can consume it.
     """
     selected_model = models.get(req.model, models.get("qwen"))
     if selected_model is None:
@@ -176,7 +176,7 @@ async def predict(req: ChatRequest, request: Request):
     if _is_identity_question(req.message):
         canned = 'I am SofAi, created by the Sofdev Team'
         ChatStore.add_message(session_id, {"role": "bot", "text": canned})
-        return {"reply": canned}
+        return {"reply": canned, "model_used": "canned"}
 
     # Format prompt based on the selected model
     system_prompt = """You are a helpful AI assistant like ChatGPT. Provide detailed, accurate, and comprehensive responses. Structure your answers with clear sections, bullet points, numbered lists, and explanations when appropriate. Use engaging language, and offer follow-up suggestions or additional help when relevant."""
@@ -186,6 +186,8 @@ async def predict(req: ChatRequest, request: Request):
         formatted_prompt = f"<|system|>\n{system_prompt}\n<|user|>\n{req.message}\n<|assistant|>\n"
     else:
         formatted_prompt = f"System: {system_prompt}\nUser: {req.message}\nAssistant:"  # fallback
+
+    final_model = req.model
     reply = selected_model.generate_response(
         formatted_prompt,
         max_new_tokens=req.max_tokens,
@@ -198,6 +200,7 @@ async def predict(req: ChatRequest, request: Request):
     if len(reply.strip()) < 200 and req.model in models:
         other_model_key = "TinyLlama/TinyLlama-1.1B-Chat-v1.0" if req.model == "qwen" else "qwen"
         if other_model_key in models:
+            final_model = other_model_key
             other_model = models[other_model_key]
             # Reformat prompt for other model
             if other_model_key == "qwen":
@@ -213,7 +216,7 @@ async def predict(req: ChatRequest, request: Request):
             )
 
     ChatStore.add_message(session_id, {"role": "bot", "text": reply})
-    return {"reply": reply}
+    return {"reply": reply, "model_used": final_model}
 
 
 

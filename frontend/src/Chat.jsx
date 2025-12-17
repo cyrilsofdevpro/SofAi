@@ -25,12 +25,13 @@ export default function Chat() {
     setLoading(true);
 
     try {
-      const botReply = await sendMessage(userMessage);
-      setMessages(prev => [...prev, { role: 'assistant', text: botReply }]);
+      const response = await sendMessage(userMessage);
+      setMessages(prev => [...prev, { role: 'assistant', text: response.reply, model_used: response.model_used }]);
     } catch (error) {
       setMessages(prev => [...prev, {
         role: 'assistant',
-        text: '❌ Error: Unable to connect to the backend. Make sure the Colab notebook is running.'
+        text: '❌ Error: Unable to connect to the backend. Make sure the Colab notebook is running.',
+        model_used: 'error'
       }]);
     } finally {
       setLoading(false);
@@ -89,6 +90,9 @@ export default function Chat() {
             </div>
             <div className="message-content">
               <div className="message-text">{msg.text}</div>
+              {msg.role === 'assistant' && msg.model_used && (
+                <div className="model-info">Model: {msg.model_used}</div>
+              )}
             </div>
           </div>
         ))}

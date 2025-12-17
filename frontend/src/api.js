@@ -1,4 +1,4 @@
-// Replaced: all chat API calls now use a single backend endpoint which returns JSON { reply: string }
+// Replaced: all chat API calls now use a single backend endpoint which returns JSON { reply: string, model_used: string }
 // IMPORTANT: this uses the public ngrok URL. Change it if your tunnel changes.
 export async function sendMessage(message) {
   // Use the public ngrok URL as the single backend endpoint.
@@ -15,7 +15,7 @@ export async function sendMessage(message) {
 
   const data = await res.json();
   if (!data || typeof data.reply !== 'string') throw new Error('Invalid response from backend');
-  return data.reply;
+  return { reply: data.reply, model_used: data.model_used || 'unknown' };
 }
 
 // Keep a minimal getHistory/getApiBase in case other parts expect them. They now return defaults.
