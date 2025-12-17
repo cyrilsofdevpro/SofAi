@@ -41,7 +41,7 @@ models: dict = {}
 
 class ChatRequest(BaseModel):
     message: str
-    max_tokens: int = 256  # increased for longer, complete responses like ChatGPT
+    max_tokens: int = 512  # increased further for comprehensive ChatGPT-like responses
     model: str = "qwen"  # default to qwen, can be "qwen" or "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
 
 
@@ -119,19 +119,21 @@ async def chat(req: ChatRequest, request: Request, api_key: str = Depends(verify
         return ChatResponse(reply=canned)
 
     # Format prompt based on the selected model
+    system_prompt = "You are a helpful AI assistant like ChatGPT. Provide detailed, accurate, and comprehensive responses."
     if req.model == "qwen":
-        formatted_prompt = f"User: {req.message}\nAssistant:"
+        formatted_prompt = f"System: {system_prompt}\nUser: {req.message}\nAssistant:"
     elif req.model == "TinyLlama/TinyLlama-1.1B-Chat-v1.0":
-        formatted_prompt = f"<|user|>\n{req.message}\n<|assistant|>\n"
+        formatted_prompt = f"<|system|>\n{system_prompt}\n<|user|>\n{req.message}\n<|assistant|>\n"
     else:
-        formatted_prompt = f"User: {req.message}\nAssistant:"  # fallback
+        formatted_prompt = f"System: {system_prompt}\nUser: {req.message}\nAssistant:"  # fallback
 
-    # Generate response with improved parameters for instruction-tuned models
+    # Generate response with parameters optimized for ChatGPT-like quality
     reply = selected_model.generate_response(
         formatted_prompt,
         max_new_tokens=req.max_tokens,
-        temperature=0.3,  # even lower for more focused, deterministic answers
-        top_p=0.7,        # even tighter nucleus sampling
+        temperature=0.7,  # increased for more natural, varied responses
+        top_p=0.95,       # higher for better diversity
+        do_sample=True,   # enable sampling for creativity
     )
 
     ChatStore.add_message(session_id, {"role": "bot", "text": reply})
@@ -159,17 +161,19 @@ async def predict(req: ChatRequest, request: Request):
         return {"reply": canned}
 
     # Format prompt based on the selected model
+    system_prompt = "You are a helpful AI assistant like ChatGPT. Provide detailed, accurate, and comprehensive responses."
     if req.model == "qwen":
-        formatted_prompt = f"User: {req.message}\nAssistant:"
+        formatted_prompt = f"System: {system_prompt}\nUser: {req.message}\nAssistant:"
     elif req.model == "TinyLlama/TinyLlama-1.1B-Chat-v1.0":
-        formatted_prompt = f"<|user|>\n{req.message}\n<|assistant|>\n"
+        formatted_prompt = f"<|system|>\n{system_prompt}\n<|user|>\n{req.message}\n<|assistant|>\n"
     else:
-        formatted_prompt = f"User: {req.message}\nAssistant:"  # fallback
+        formatted_prompt = f"System: {system_prompt}\nUser: {req.message}\nAssistant:"  # fallback
     reply = selected_model.generate_response(
         formatted_prompt,
         max_new_tokens=req.max_tokens,
-        temperature=0.3,
-        top_p=0.7,
+        temperature=0.7,
+        top_p=0.95,
+        do_sample=True,
     )
 
     ChatStore.add_message(session_id, {"role": "bot", "text": reply})
