@@ -36,12 +36,13 @@ MODEL_LOAD_8BIT = os.getenv("MODEL_LOAD_8BIT", "false").lower() in ("1", "true",
 MODEL_REVISION = os.getenv("MODEL_REVISION") or None
 from typing import Any
 
-model: Any = None
+models: dict = {}
 
 
 class ChatRequest(BaseModel):
     message: str
     max_tokens: int = 80  # even shorter for focused answers
+    model: str = "qwen"  # default to qwen, can be "qwen" or "tinyllama"
 
 
 class ChatResponse(BaseModel):
@@ -77,11 +78,12 @@ def _is_identity_question(text: str) -> bool:
 
 @app.on_event("startup")
 async def startup_event():
-    global model
+    global models
     # If SKIP_MODEL_LOAD is set, use the lightweight dummy model for quick local testing
     skip = os.getenv("SKIP_MODEL_LOAD", "0").lower() in ("1", "true", "yes")
     if skip:
-        model = _DummyModel()
+        models["qwen"] = _DummyModel()
+        models["TinyLlama/TinyLlama-1.1B-Chat-v1.0"] = _DummyModel()
         return
 
     # Import the model loader lazily to avoid importing heavy HF libraries at module import time
@@ -90,7 +92,9 @@ async def startup_event():
     except Exception:
         from model_loader import ModelWrapper
 
-    model = ModelWrapper.load_cached(MODEL_NAME, trust_remote_code=MODEL_TRUST_REMOTE, load_in_8bit=MODEL_LOAD_8BIT, revision=MODEL_REVISION)
+    # Load both models
+    models["qwen"] = ModelWrapper.load_cached("Qwen/Qwen2.5-0.5B-Instruct", trust_remote_code=MODEL_TRUST_REMOTE, load_in_8bit=MODEL_LOAD_8BIT, revision=MODEL_REVISION)
+    models["TinyLlama/TinyLlama-1.1B-Chat-v1.0"] = ModelWrapper.load_cached("TinyLlama/TinyLlama-1.1B-Chat-v1.0", trust_remote_code=MODEL_TRUST_REMOTE, load_in_8bit=MODEL_LOAD_8BIT, revision=MODEL_REVISION)
 
 
 @app.get("/health")
@@ -100,7 +104,8 @@ async def health():
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat(req: ChatRequest, request: Request, api_key: str = Depends(verify_api_key)):
-    if model is None:
+    selected_model = models.get(req.model, models.get("qwen"))
+    if selected_model is None:
         raise HTTPException(status_code=503, detail="Model not loaded")
     # store user message in session history (optional)
     session_id = request.headers.get('x-session-id', 'default')
@@ -118,7 +123,7 @@ async def chat(req: ChatRequest, request: Request, api_key: str = Depends(verify
     formatted_prompt = f"User: {req.message}\nAssistant:"
 
     # Generate response with improved parameters for instruction-tuned models
-    reply = model.generate_response(
+    reply = selected_model.generate_response(
         formatted_prompt,
         max_new_tokens=req.max_tokens,
         temperature=0.3,  # even lower for more focused, deterministic answers
@@ -135,7 +140,8 @@ async def predict(req: ChatRequest, request: Request):
     This endpoint intentionally does not require API key authentication (meant for local testing).
     It returns JSON {"reply": str} so simple clients can consume it.
     """
-    if model is None:
+    selected_model = models.get(req.model, models.get("qwen"))
+    if selected_model is None:
         raise HTTPException(status_code=503, detail="Model not loaded")
 
     session_id = request.headers.get('x-session-id', 'default')
@@ -149,7 +155,7 @@ async def predict(req: ChatRequest, request: Request):
         return {"reply": canned}
 
     formatted_prompt = f"User: {req.message}\nAssistant:"
-    reply = model.generate_response(
+    reply = selected_model.generate_response(
         formatted_prompt,
         max_new_tokens=req.max_tokens,
         temperature=0.3,
