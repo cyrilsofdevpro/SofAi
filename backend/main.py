@@ -84,6 +84,8 @@ async def startup_event():
     if skip:
         models["qwen"] = _DummyModel()
         models["TinyLlama/TinyLlama-1.1B-Chat-v1.0"] = _DummyModel()
+        models["phi"] = _DummyModel()
+        models["tinyllama"] = _DummyModel()
         return
 
     # Import the model loader lazily to avoid importing heavy HF libraries at module import time
@@ -95,6 +97,8 @@ async def startup_event():
     # Load both models
     models["qwen"] = ModelWrapper.load_cached("Qwen/Qwen2.5-0.5B-Instruct", trust_remote_code=MODEL_TRUST_REMOTE, load_in_8bit=MODEL_LOAD_8BIT, revision=MODEL_REVISION)
     models["TinyLlama/TinyLlama-1.1B-Chat-v1.0"] = ModelWrapper.load_cached("TinyLlama/TinyLlama-1.1B-Chat-v1.0", trust_remote_code=MODEL_TRUST_REMOTE, load_in_8bit=MODEL_LOAD_8BIT, revision=MODEL_REVISION)
+    models["phi"] = ModelWrapper.load_cached("microsoft/phi-2", trust_remote_code=MODEL_TRUST_REMOTE, load_in_8bit=MODEL_LOAD_8BIT, revision=MODEL_REVISION)
+    models["tinyllama"] = models["TinyLlama/TinyLlama-1.1B-Chat-v1.0"]  # alias
 
 
 @app.get("/health")
@@ -105,6 +109,8 @@ async def health():
 @app.post("/chat", response_model=ChatResponse)
 async def chat(req: ChatRequest, request: Request, api_key: str = Depends(verify_api_key)):
     selected_model = models.get(req.model, models.get("qwen"))
+    if req.model == "auto":
+        selected_model = models.get("qwen")  # for now, auto uses qwen
     if selected_model is None:
         raise HTTPException(status_code=503, detail="Model not loaded")
     # store user message in session history (optional)
@@ -165,6 +171,8 @@ async def predict(req: ChatRequest, request: Request):
     It returns JSON {"reply": str, "model_used": str} so simple clients can consume it.
     """
     selected_model = models.get(req.model, models.get("qwen"))
+    if req.model == "auto":
+        selected_model = models.get("qwen")  # for now, auto uses qwen
     if selected_model is None:
         raise HTTPException(status_code=503, detail="Model not loaded")
 
