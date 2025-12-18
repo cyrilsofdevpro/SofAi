@@ -18,6 +18,10 @@ export default function Chat() {
     return model;
   };
 
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
