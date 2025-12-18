@@ -35,6 +35,28 @@
   color: #94a3b8;
 }
 
+.model-selector {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #e0e0e0;
+}
+
+.model-selector label {
+  font-weight: 500;
+}
+
+.model-selector select {
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 6px;
+  color: #e0e0e0;
+  padding: 4px 8px;
+  font-size: 14px;
+}
+
 /* Messages Container */
 .messages-container {
   flex: 1;

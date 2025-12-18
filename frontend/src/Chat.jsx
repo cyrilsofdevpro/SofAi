@@ -6,10 +6,16 @@ export default function Chat() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [selectedModel, setSelectedModel] = useState('qwen');
   const messagesEndRef = useRef(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  const getModelName = (model) => {
+    if (model === "qwen") return "Qwen";
+    if (model === "phi") return "Phi-2";
+    if (model === "tinyllama") return "TinyLlama";
+    if (model === "TinyLlama/TinyLlama-1.1B-Chat-v1.0") return "TinyLlama";
+    if (model === "canned") return "System";
+    return model;
   };
 
   useEffect(() => {
@@ -25,7 +31,7 @@ export default function Chat() {
     setLoading(true);
 
     try {
-      const response = await sendMessage(userMessage);
+      const response = await sendMessage(userMessage, selectedModel);
       setMessages(prev => [...prev, { role: 'assistant', text: response.reply, model_used: response.model_used }]);
     } catch (error) {
       setMessages(prev => [...prev, {
@@ -52,6 +58,15 @@ export default function Chat() {
         <div className="header-content">
           <h1>SofAi</h1>
           <p className="subtitle">Your AI Assistant</p>
+          <div className="model-selector">
+            <label>Model: </label>
+            <select value={selectedModel} onChange={(e) => setSelectedModel(e.target.value)}>
+              <option value="qwen">Qwen</option>
+              <option value="phi">Phi-2</option>
+              <option value="tinyllama">TinyLlama</option>
+              <option value="auto">Auto</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -91,7 +106,7 @@ export default function Chat() {
             <div className="message-content">
               <div className="message-text">{msg.text}</div>
               {msg.role === 'assistant' && msg.model_used && (
-                <div className="model-info">Model: {msg.model_used}</div>
+                <div className="model-info">Answered by {getModelName(msg.model_used)}</div>
               )}
             </div>
           </div>
@@ -132,7 +147,7 @@ export default function Chat() {
             {loading ? (
               <span className="spinner">⟳</span>
             ) : (
-              <span>➤</span>
+              <span>➤➤</span>
             )}
           </button>
         </div>
