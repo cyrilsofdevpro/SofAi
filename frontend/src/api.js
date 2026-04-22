@@ -1,5 +1,5 @@
 // Backend API URL - Update this to your actual backend URL
-const API_BASE = 'http://localhost:3001';
+const API_BASE = 'https://cliquish-unsaluted-pablo.ngrok-free.dev';
 
 // ============= Chat API =============
 
