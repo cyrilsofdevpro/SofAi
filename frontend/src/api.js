@@ -1,26 +1,41 @@
-// Backend API URL - Update this to your actual backend URL
-const API_BASE = 'https://cliquish-unsaluted-pablo.ngrok-free.dev';
+// Backend API URL - Use local backend on port 3001
+// For Colab/remote access, change to: 'https://your-ngrok-url.ngrok-free.dev'
+const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
 // ============= Chat API =============
 
-// Replaced: all chat API calls now use a single backend endpoint which returns JSON { reply: string, model_used: string }
-// IMPORTANT: this uses the public ngrok URL. Change it if your tunnel changes.
+// Chat endpoint with web search integration
 export async function sendMessage(message, model = 'qwen', history = []) {
-  // Use the public ngrok URL as the single backend endpoint.
-  const url = `${API_BASE}/predict`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message, model, history })
-  });
+  // Use the /chat endpoint which includes web search
+  const url = `${API_BASE}/chat`;
+  
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message, model, history })
+    });
 
-  if (!res.ok) {
-    throw new Error(`Request to ${url} failed: ${res.status} ${res.statusText}`);
+    if (!res.ok) {
+      throw new Error(`Backend error: ${res.status} ${res.statusText}`);
+    }
+
+    const data = await res.json();
+    
+    // Handle new response format: { response, sources }
+    if (data && typeof data.response === 'string') {
+      return { 
+        reply: data.response, 
+        model_used: model,
+        sources: data.sources || []
+      };
+    }
+    
+    throw new Error('Invalid response format from backend');
+  } catch (error) {
+    console.error('❌ Backend error:', error.message);
+    throw error;
   }
-
-  const data = await res.json();
-  if (!data || typeof data.reply !== 'string') throw new Error('Invalid response from backend');
-  return { reply: data.reply, model_used: data.model_used || 'unknown' };
 }
 
 // Keep a minimal getHistory/getApiBase in case other parts expect them. They now return defaults.
