@@ -181,81 +181,54 @@ async def check_email(email: str):
 
 
 # ============= Chat Endpoints =============
-async def chat(req: ChatRequest, request: Request, api_key: str = Depends(verify_api_key)):
+@app.post("/chat")
+async def chat(req: ChatRequest):
+    """
+    Web search enabled chat endpoint.
+    
+    Flow:
+    1. Search web for relevant information
+    2. Build context from search results
+    3. Build prompt with context
+    4. Generate response using model
+    5. Return response with sources
+    """
+    # 1. Search web
+    search_results = perform_search(req.message, num_results=5)
+
+    # 2. Build context from search results
+    context = format_search_context(search_results)
+
+    # 3. Build prompt with context
+    system_prompt = """You are a helpful AI assistant with real-time web access. Provide detailed, accurate, and comprehensive responses using the web information provided. Structure your answers with clear sections, bullet points, numbered lists, and explanations when appropriate. Always cite sources when using web information."""
+    
+    prompt = f"""System: {system_prompt}
+
+Web Context:
+{context}
+
+User Question: {req.message}
+
+Answer:"""
+
+    # 4. Run model and generate response
     selected_model = models.get(req.model, models.get("qwen"))
-    if req.model == "auto":
-        selected_model = models.get("qwen")  # for now, auto uses qwen
     if selected_model is None:
         raise HTTPException(status_code=503, detail="Model not loaded")
-    # store user message in session history (optional)
-    session_id = request.headers.get('x-session-id', 'default')
-    ChatStore.add_message(session_id, {"role": "user", "text": req.message})
-
-    # Shortcut canned responses for simple, common questions to avoid unnecessary model calls
-    # If the user asks about the assistant's identity, return the canned SofAi reply
-    if _is_identity_question(req.message):
-        canned = 'I am SofAi, created by the Sofdev Team'
-        ChatStore.add_message(session_id, {"role": "bot", "text": canned})
-        return ChatResponse(reply=canned, sources=None, used_search=False)
-
-    # Check if web search is needed
-    search_results = []
-    used_search = False
     
-    if needs_search(req.message):
-        try:
-            search_results = perform_search(req.message, num_results=5)
-            used_search = len(search_results) > 0
-        except Exception as e:
-            print(f"Search error: {e}")
-            search_results = []
-
-    # Format prompt based on the selected model
-    system_prompt = """You are a helpful AI assistant like ChatGPT. Provide detailed, accurate, and comprehensive responses. Structure your answers with clear sections, bullet points, numbered lists, and explanations when appropriate. Use engaging language, and offer follow-up suggestions or additional help when relevant."""
-    
-    # Build conversation history
-    conversation = []
-    if req.history:
-        for msg in req.history:
-            conversation.append(f"{msg['role'].capitalize()}: {msg['content']}")
-    conversation.append(f"User: {req.message}")
-    
-    if req.model == "qwen":
-        formatted_prompt = f"System: {system_prompt}\n" + "\n".join(conversation) + "\nAssistant:"
-    elif req.model == "TinyLlama/TinyLlama-1.1B-Chat-v1.0":
-        formatted_prompt = f"<|system|>\n{system_prompt}\n" + "\n".join([f"<|{msg.split(': ')[0].lower()}|>\n{msg.split(': ', 1)[1]}" for msg in conversation]) + "\n<|assistant|>\n"
-    else:
-        formatted_prompt = f"System: {system_prompt}\n" + "\n".join(conversation) + "\nAssistant:"  # fallback
-
-    # Generate response with parameters optimized for ChatGPT-like quality
-    reply = selected_model.generate_response(
-        formatted_prompt,
-        max_new_tokens=req.max_tokens,
-        temperature=0.7,  # increased for more natural, varied responses
-        top_p=0.95,       # higher for better diversity
-        do_sample=True,   # enable sampling for creativity
+    answer = selected_model.generate_response(
+        prompt,
+        max_new_tokens=250,
+        temperature=0.7,
+        top_p=0.95,
+        do_sample=True
     )
 
-    # Auto-switch model if response is too short for better quality
-    if len(reply.strip()) < 200 and req.model in models:
-        other_model_key = "TinyLlama/TinyLlama-1.1B-Chat-v1.0" if req.model == "qwen" else "qwen"
-        if other_model_key in models:
-            other_model = models[other_model_key]
-            # Reformat prompt for other model
-            if other_model_key == "qwen":
-                formatted_prompt = f"System: {system_prompt}\n" + "\n".join(conversation) + "\nAssistant:"
-            else:
-                formatted_prompt = f"<|system|>\n{system_prompt}\n" + "\n".join([f"<|{msg.split(': ')[0].lower()}|>\n{msg.split(': ', 1)[1]}" for msg in conversation]) + "\n<|assistant|>\n"
-            reply = other_model.generate_response(
-                formatted_prompt,
-                max_new_tokens=req.max_tokens,
-                temperature=0.7,
-                top_p=0.95,
-                do_sample=True,
-            )
-
-    ChatStore.add_message(session_id, {"role": "bot", "text": reply})
-    return ChatResponse(reply=reply, sources=search_results if used_search else None, used_search=used_search)
+    # 5. Return response with sources
+    return {
+        "response": answer,
+        "sources": search_results
+    }
 
 
 @app.post("/predict")
