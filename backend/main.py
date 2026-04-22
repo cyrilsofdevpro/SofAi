@@ -7,10 +7,12 @@ try:
     from .utils import verify_api_key
     from .storage import ChatStore
     from .database import db
+    from .web_search import perform_search, needs_search, format_search_context, build_search_prompt
 except Exception:
     from utils import verify_api_key
     from storage import ChatStore
     from database import db
+    from web_search import perform_search, needs_search, format_search_context, build_search_prompt
 
 
     # Dry-run dummy model used when full HF dependencies are not installed or for quick testing.
@@ -47,6 +49,8 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     reply: str
+    sources: Optional[List[Dict[str, str]]] = None
+    used_search: Optional[bool] = False
 
 
 # Authentication Models
@@ -192,7 +196,19 @@ async def chat(req: ChatRequest, request: Request, api_key: str = Depends(verify
     if _is_identity_question(req.message):
         canned = 'I am SofAi, created by the Sofdev Team'
         ChatStore.add_message(session_id, {"role": "bot", "text": canned})
-        return ChatResponse(reply=canned)
+        return ChatResponse(reply=canned, sources=None, used_search=False)
+
+    # Check if web search is needed
+    search_results = []
+    used_search = False
+    
+    if needs_search(req.message):
+        try:
+            search_results = perform_search(req.message, num_results=5)
+            used_search = len(search_results) > 0
+        except Exception as e:
+            print(f"Search error: {e}")
+            search_results = []
 
     # Format prompt based on the selected model
     system_prompt = """You are a helpful AI assistant like ChatGPT. Provide detailed, accurate, and comprehensive responses. Structure your answers with clear sections, bullet points, numbered lists, and explanations when appropriate. Use engaging language, and offer follow-up suggestions or additional help when relevant."""
@@ -239,7 +255,7 @@ async def chat(req: ChatRequest, request: Request, api_key: str = Depends(verify
             )
 
     ChatStore.add_message(session_id, {"role": "bot", "text": reply})
-    return ChatResponse(reply=reply)
+    return ChatResponse(reply=reply, sources=search_results if used_search else None, used_search=used_search)
 
 
 @app.post("/predict")
@@ -262,7 +278,19 @@ async def predict(req: ChatRequest, request: Request):
     if _is_identity_question(req.message):
         canned = 'I am SofAi, created by the Sofdev Team'
         ChatStore.add_message(session_id, {"role": "bot", "text": canned})
-        return {"reply": canned, "model_used": "canned"}
+        return {"reply": canned, "model_used": "canned", "sources": None, "used_search": False}
+
+    # Check if web search is needed
+    search_results = []
+    used_search = False
+    
+    if needs_search(req.message):
+        try:
+            search_results = perform_search(req.message, num_results=5)
+            used_search = len(search_results) > 0
+        except Exception as e:
+            print(f"Search error: {e}")
+            search_results = []
 
     # Format prompt based on the selected model
     system_prompt = """You are a helpful AI assistant like ChatGPT. Provide detailed, accurate, and comprehensive responses. Structure your answers with clear sections, bullet points, numbered lists, and explanations when appropriate. Use engaging language, and offer follow-up suggestions or additional help when relevant."""
@@ -272,6 +300,12 @@ async def predict(req: ChatRequest, request: Request):
     if req.history:
         for msg in req.history:
             conversation.append(f"{msg['role'].capitalize()}: {msg['content']}")
+    
+    # Add search context if available
+    if used_search and search_results:
+        search_context = format_search_context(search_results)
+        system_prompt += f"\n\nWeb Search Results:\n{search_context}"
+    
     conversation.append(f"User: {req.message}")
     
     if req.model == "qwen":
@@ -310,7 +344,12 @@ async def predict(req: ChatRequest, request: Request):
             )
 
     ChatStore.add_message(session_id, {"role": "bot", "text": reply})
-    return {"reply": reply, "model_used": final_model}
+    return {
+        "reply": reply, 
+        "model_used": final_model, 
+        "sources": search_results if used_search else None,
+        "used_search": used_search
+    }
 
 
 

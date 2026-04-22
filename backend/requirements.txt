@@ -10,3 +10,6 @@ sentencepiece
 datasets
 flask
 flask-cors
+requests
+beautifulsoup4
+
