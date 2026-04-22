@@ -6,8 +6,13 @@
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
-  background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 50%, #0d1b2a 100%);
-  color: #e0e0e0;
+  background: #ffffff;
+  color: #000000;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  display: flex;
+}
   overflow: hidden;
   height: 100vh;
   width: 100vw;

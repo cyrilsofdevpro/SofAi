@@ -15,8 +15,8 @@ export default function Chat(){
     }).catch(()=>{})
     return ()=>{ mounted = false }
   }, [])
-
-  useEffect(()=>{
+ 
+  useEffect(()=>{ 
     if(scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
   }, [messages])
 

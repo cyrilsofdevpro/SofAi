@@ -6,9 +6,11 @@ from fastapi.middleware.cors import CORSMiddleware
 try:
     from .utils import verify_api_key
     from .storage import ChatStore
+    from .database import db
 except Exception:
     from utils import verify_api_key
     from storage import ChatStore
+    from database import db
 
 
     # Dry-run dummy model used when full HF dependencies are not installed or for quick testing.
@@ -34,19 +36,37 @@ MODEL_NAME = os.getenv("MODEL_NAME", "mistral-7b-instruct")
 MODEL_TRUST_REMOTE = os.getenv("MODEL_TRUST_REMOTE", "false").lower() in ("1", "true", "yes")
 MODEL_LOAD_8BIT = os.getenv("MODEL_LOAD_8BIT", "false").lower() in ("1", "true", "yes")
 MODEL_REVISION = os.getenv("MODEL_REVISION") or None
-from typing import Any
-
-models: dict = {}
-
+from typing import List, Dict, Optional
 
 class ChatRequest(BaseModel):
     message: str
-    max_tokens: int = 512  # increased further for comprehensive ChatGPT-like responses
-    model: str = "qwen"  # default to qwen, can be "qwen" or "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
+    max_tokens: int = 2048  # increased for longer, complete ChatGPT-like responses
+    model: str = "qwen"
+    history: Optional[List[Dict[str, str]]] = None
 
 
 class ChatResponse(BaseModel):
     reply: str
+
+
+# Authentication Models
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+class SignupRequest(BaseModel):
+    email: str
+    password: str
+    username: str
+    gender: str = "not-specified"
+
+
+class AuthResponse(BaseModel):
+    success: bool
+    message: str = None
+    error: str = None
+    user: dict = None
 
 
 def _is_identity_question(text: str) -> bool:
@@ -84,7 +104,6 @@ async def startup_event():
     if skip:
         models["qwen"] = _DummyModel()
         models["TinyLlama/TinyLlama-1.1B-Chat-v1.0"] = _DummyModel()
-        models["phi"] = _DummyModel()
         models["tinyllama"] = _DummyModel()
         return
 
@@ -94,10 +113,9 @@ async def startup_event():
     except Exception:
         from model_loader import ModelWrapper
 
-    # Load both models
+    # Load models
     models["qwen"] = ModelWrapper.load_cached("Qwen/Qwen2.5-0.5B-Instruct", trust_remote_code=MODEL_TRUST_REMOTE, load_in_8bit=MODEL_LOAD_8BIT, revision=MODEL_REVISION)
     models["TinyLlama/TinyLlama-1.1B-Chat-v1.0"] = ModelWrapper.load_cached("TinyLlama/TinyLlama-1.1B-Chat-v1.0", trust_remote_code=MODEL_TRUST_REMOTE, load_in_8bit=MODEL_LOAD_8BIT, revision=MODEL_REVISION)
-    models["phi"] = ModelWrapper.load_cached("microsoft/phi-2", trust_remote_code=MODEL_TRUST_REMOTE, load_in_8bit=MODEL_LOAD_8BIT, revision=MODEL_REVISION)
     models["tinyllama"] = models["TinyLlama/TinyLlama-1.1B-Chat-v1.0"]  # alias
 
 
@@ -106,7 +124,55 @@ async def health():
     return {"status": "ok"}
 
 
-@app.post("/chat", response_model=ChatResponse)
+# ============= Authentication Endpoints =============
+
+@app.post("/auth/signup", response_model=AuthResponse)
+async def signup(req: SignupRequest):
+    """Create a new user account"""
+    result = db.create_user(
+        email=req.email,
+        password=req.password,
+        username=req.username,
+        gender=req.gender
+    )
+    
+    if result["success"]:
+        return AuthResponse(
+            success=True,
+            message=result["message"],
+            user=result["user"]
+        )
+    else:
+        raise HTTPException(status_code=400, detail=result["error"])
+
+
+@app.post("/auth/login", response_model=AuthResponse)
+async def login(req: LoginRequest):
+    """Authenticate user and return user data"""
+    result = db.authenticate_user(email=req.email, password=req.password)
+    
+    if result["success"]:
+        return AuthResponse(
+            success=True,
+            message=result["message"],
+            user=result["user"]
+        )
+    else:
+        raise HTTPException(status_code=401, detail=result["error"])
+
+
+@app.post("/auth/check-email")
+async def check_email(email: str):
+    """Check if email is already registered"""
+    exists = db.user_exists(email)
+    return {
+        "email": email,
+        "exists": exists,
+        "message": "User found" if exists else "Email available for registration"
+    }
+
+
+# ============= Chat Endpoints =============
 async def chat(req: ChatRequest, request: Request, api_key: str = Depends(verify_api_key)):
     selected_model = models.get(req.model, models.get("qwen"))
     if req.model == "auto":
@@ -126,12 +192,20 @@ async def chat(req: ChatRequest, request: Request, api_key: str = Depends(verify
 
     # Format prompt based on the selected model
     system_prompt = """You are a helpful AI assistant like ChatGPT. Provide detailed, accurate, and comprehensive responses. Structure your answers with clear sections, bullet points, numbered lists, and explanations when appropriate. Use engaging language, and offer follow-up suggestions or additional help when relevant."""
+    
+    # Build conversation history
+    conversation = []
+    if req.history:
+        for msg in req.history:
+            conversation.append(f"{msg['role'].capitalize()}: {msg['content']}")
+    conversation.append(f"User: {req.message}")
+    
     if req.model == "qwen":
-        formatted_prompt = f"System: {system_prompt}\nUser: {req.message}\nAssistant:"
+        formatted_prompt = f"System: {system_prompt}\n" + "\n".join(conversation) + "\nAssistant:"
     elif req.model == "TinyLlama/TinyLlama-1.1B-Chat-v1.0":
-        formatted_prompt = f"<|system|>\n{system_prompt}\n<|user|>\n{req.message}\n<|assistant|>\n"
+        formatted_prompt = f"<|system|>\n{system_prompt}\n" + "\n".join([f"<|{msg.split(': ')[0].lower()}|>\n{msg.split(': ', 1)[1]}" for msg in conversation]) + "\n<|assistant|>\n"
     else:
-        formatted_prompt = f"System: {system_prompt}\nUser: {req.message}\nAssistant:"  # fallback
+        formatted_prompt = f"System: {system_prompt}\n" + "\n".join(conversation) + "\nAssistant:"  # fallback
 
     # Generate response with parameters optimized for ChatGPT-like quality
     reply = selected_model.generate_response(
@@ -149,9 +223,9 @@ async def chat(req: ChatRequest, request: Request, api_key: str = Depends(verify
             other_model = models[other_model_key]
             # Reformat prompt for other model
             if other_model_key == "qwen":
-                formatted_prompt = f"System: {system_prompt}\nUser: {req.message}\nAssistant:"
+                formatted_prompt = f"System: {system_prompt}\n" + "\n".join(conversation) + "\nAssistant:"
             else:
-                formatted_prompt = f"<|system|>\n{system_prompt}\n<|user|>\n{req.message}\n<|assistant|>\n"
+                formatted_prompt = f"<|system|>\n{system_prompt}\n" + "\n".join([f"<|{msg.split(': ')[0].lower()}|>\n{msg.split(': ', 1)[1]}" for msg in conversation]) + "\n<|assistant|>\n"
             reply = other_model.generate_response(
                 formatted_prompt,
                 max_new_tokens=req.max_tokens,
@@ -188,12 +262,20 @@ async def predict(req: ChatRequest, request: Request):
 
     # Format prompt based on the selected model
     system_prompt = """You are a helpful AI assistant like ChatGPT. Provide detailed, accurate, and comprehensive responses. Structure your answers with clear sections, bullet points, numbered lists, and explanations when appropriate. Use engaging language, and offer follow-up suggestions or additional help when relevant."""
+    
+    # Build conversation history
+    conversation = []
+    if req.history:
+        for msg in req.history:
+            conversation.append(f"{msg['role'].capitalize()}: {msg['content']}")
+    conversation.append(f"User: {req.message}")
+    
     if req.model == "qwen":
-        formatted_prompt = f"System: {system_prompt}\nUser: {req.message}\nAssistant:"
+        formatted_prompt = f"System: {system_prompt}\n" + "\n".join(conversation) + "\nAssistant:"
     elif req.model == "TinyLlama/TinyLlama-1.1B-Chat-v1.0":
-        formatted_prompt = f"<|system|>\n{system_prompt}\n<|user|>\n{req.message}\n<|assistant|>\n"
+        formatted_prompt = f"<|system|>\n{system_prompt}\n" + "\n".join([f"<|{msg.split(': ')[0].lower()}|>\n{msg.split(': ', 1)[1]}" for msg in conversation]) + "\n<|assistant|>\n"
     else:
-        formatted_prompt = f"System: {system_prompt}\nUser: {req.message}\nAssistant:"  # fallback
+        formatted_prompt = f"System: {system_prompt}\n" + "\n".join(conversation) + "\nAssistant:"  # fallback
 
     final_model = req.model
     reply = selected_model.generate_response(
@@ -212,9 +294,9 @@ async def predict(req: ChatRequest, request: Request):
             other_model = models[other_model_key]
             # Reformat prompt for other model
             if other_model_key == "qwen":
-                formatted_prompt = f"System: {system_prompt}\nUser: {req.message}\nAssistant:"
+                formatted_prompt = f"System: {system_prompt}\n" + "\n".join(conversation) + "\nAssistant:"
             else:
-                formatted_prompt = f"<|system|>\n{system_prompt}\n<|user|>\n{req.message}\n<|assistant|>\n"
+                formatted_prompt = f"<|system|>\n{system_prompt}\n" + "\n".join([f"<|{msg.split(': ')[0].lower()}|>\n{msg.split(': ', 1)[1]}" for msg in conversation]) + "\n<|assistant|>\n"
             reply = other_model.generate_response(
                 formatted_prompt,
                 max_new_tokens=req.max_tokens,

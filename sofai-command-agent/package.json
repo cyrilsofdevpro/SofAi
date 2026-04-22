@@ -1,0 +1,47 @@
+{
+  "name": "sofai-command-agent",
+  "version": "1.0.0",
+  "description": "SofAi Command Agent - Local service for system commands via AI",
+  "main": "src/main.js",
+  "homepage": "./",
+  "author": "SofAi Team",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build": "electron-builder",
+    "build:win": "electron-builder --win --publish never",
+    "pack": "electron-builder --dir"
+  },
+  "dependencies": {
+    "electron-squirrel-startup": "^1.1.0",
+    "ws": "^8.14.2",
+    "python-shell": "^5.0.0"
+  },
+  "devDependencies": {
+    "electron": "^27.0.0",
+    "electron-builder": "^24.6.4"
+  },
+  "build": {
+    "appId": "com.sofai.command-agent",
+    "productName": "SofAi Command Agent",
+    "directories": {
+      "buildResources": "assets"
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "certificateFile": null,
+      "certificatePassword": null
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "SofAi Command Agent"
+    }
+  }
+}

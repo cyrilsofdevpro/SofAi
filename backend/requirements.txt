@@ -8,3 +8,5 @@ bitsandbytes
 safetensors
 sentencepiece
 datasets
+flask
+flask-cors

@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SofAi Installation Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .subtitle {
+            color: #666;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .status-box {
+            background: #f5f5f5;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+        }
+
+        .status-title {
+            color: #667eea;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+
+        .status-value {
+            color: #333;
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .button-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+            border: 1px solid #ddd;
+        }
+
+        .btn-secondary:hover {
+            background: #e5e5e5;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .progress-section {
+            margin-bottom: 20px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            transition: width 0.3s ease;
+            border-radius: 10px;
+        }
+
+        .progress-text {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .log-box {
+            background: #1e1e1e;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        .log-line {
+            margin: 2px 0;
+        }
+
+        .log-error {
+            color: #ff6b6b;
+        }
+
+        .log-success {
+            color: #51cf66;
+        }
+
+        .info-box {
+            background: #e3f2fd;
+            border: 1px solid #90caf9;
+            border-radius: 8px;
+            padding: 12px;
+            color: #1565c0;
+            font-size: 13px;
+            margin-top: 20px;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        .status-indicator.online {
+            background: #4caf50;
+        }
+
+        .status-indicator.offline {
+            background: #f44336;
+        }
+
+        .status-indicator.loading {
+            background: #ff9800;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .features {
+            background: #f9f9f9;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+
+        .features h3 {
+            color: #333;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .features ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .features li {
+            color: #666;
+            font-size: 13px;
+            padding: 4px 0;
+        }
+
+        .features li:before {
+            content: "✓ ";
+            color: #4caf50;
+            font-weight: bold;
+            margin-right: 6px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>SofAi Command Agent</h1>
+        <p class="subtitle">One-Click Installation Testing</p>
+
+        <div class="status-box">
+            <div class="status-title">API Status</div>
+            <div class="status-value">
+                <span class="status-indicator offline" id="api-indicator"></span>
+                <span id="api-status">Checking...</span>
+            </div>
+        </div>
+
+        <div class="status-box">
+            <div class="status-title">Agent Status</div>
+            <div class="status-value">
+                <span class="status-indicator offline" id="agent-indicator"></span>
+                <span id="agent-status">Checking...</span>
+            </div>
+        </div>
+
+        <div class="button-group">
+            <button class="btn-primary" id="check-btn" onclick="checkAPI()">Check API Status</button>
+            <button class="btn-primary" id="check-agent-btn" onclick="checkAgent()">Check Agent Status</button>
+            <button class="btn-primary" id="install-btn" onclick="startInstall()">Install Agent</button>
+            <button class="btn-secondary" id="clear-btn" onclick="clearLog()">Clear Log</button>
+        </div>
+
+        <div class="progress-section" id="progress-section" style="display: none;">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+            </div>
+            <div class="progress-text">
+                <span id="progress-message">Starting...</span>
+                <span id="progress-percent">0%</span>
+            </div>
+        </div>
+
+        <div class="log-box" id="log"></div>
+
+        <div class="features">
+            <h3>Installation includes:</h3>
+            <ul>
+                <li>Voice command support</li>
+                <li>System app launching</li>
+                <li>Windows autostart</li>
+                <li>System tray integration</li>
+            </ul>
+        </div>
+
+        <div class="info-box">
+            <strong>📝 Note:</strong> Make sure the backend is running on port 5050. Run the installation API first!
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5050';
+        const log = document.getElementById('log');
+
+        function logMessage(message, type = 'info') {
+            const line = document.createElement('div');
+            line.className = `log-line ${type === 'error' ? 'log-error' : type === 'success' ? 'log-success' : ''}`;
+            line.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            log.appendChild(line);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        function clearLog() {
+            log.innerHTML = '';
+        }
+
+        async function checkAPI() {
+            logMessage('Checking API status...');
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                if (response.ok) {
+                    updateAPIStatus(true);
+                    logMessage('✓ API is online and responding', 'success');
+                } else {
+                    updateAPIStatus(false);
+                    logMessage('✗ API returned error', 'error');
+                }
+            } catch (err) {
+                updateAPIStatus(false);
+                logMessage(`✗ Cannot reach API: ${err.message}`, 'error');
+            }
+        }
+
+        async function checkAgent() {
+            logMessage('Checking agent installation status...');
+            try {
+                const response = await fetch(`${API_BASE}/api/check-agent`);
+                const data = await response.json();
+                
+                if (data.installed) {
+                    updateAgentStatus(true);
+                    logMessage(`✓ Agent is installed at: ${data.path}`, 'success');
+                } else {
+                    updateAgentStatus(false);
+                    logMessage('✗ Agent is not installed', 'info');
+                }
+            } catch (err) {
+                updateAgentStatus(false);
+                logMessage(`✗ Error checking agent: ${err.message}`, 'error');
+            }
+        }
+
+        async function startInstall() {
+            logMessage('Starting installation...');
+            document.getElementById('progress-section').style.display = 'block';
+            document.getElementById('install-btn').disabled = true;
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/install-agent`, {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    logMessage('✓ Installation started', 'success');
+                    monitorProgress();
+                } else {
+                    logMessage('✗ Failed to start installation', 'error');
+                    document.getElementById('install-btn').disabled = false;
+                }
+            } catch (err) {
+                logMessage(`✗ Error: ${err.message}`, 'error');
+                document.getElementById('install-btn').disabled = false;
+            }
+        }
+
+        async function monitorProgress() {
+            let completed = false;
+            
+            while (!completed) {
+                try {
+                    const response = await fetch(`${API_BASE}/api/install-status`);
+                    const data = await response.json();
+                    
+                    document.getElementById('progress-fill').style.width = `${data.progress}%`;
+                    document.getElementById('progress-percent').textContent = `${data.progress}%`;
+                    document.getElementById('progress-message').textContent = data.message;
+                    
+                    // Log latest message if different
+                    if (data.log && data.log.length > 0) {
+                        const lastLog = data.log[data.log.length - 1];
+                        if (lastLog && !lastLog.includes('[')) {
+                            logMessage(lastLog);
+                        }
+                    }
+                    
+                    if (data.status === 'completed') {
+                        logMessage('✓ Installation completed successfully!', 'success');
+                        completed = true;
+                        setTimeout(() => {
+                            checkAgent();
+                            document.getElementById('install-btn').disabled = false;
+                        }, 2000);
+                    } else if (data.status === 'error') {
+                        logMessage(`✗ Installation failed: ${data.message}`, 'error');
+                        completed = true;
+                        document.getElementById('install-btn').disabled = false;
+                    }
+                    
+                    if (!completed) {
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                    }
+                } catch (err) {
+                    logMessage(`✗ Error monitoring progress: ${err.message}`, 'error');
+                    completed = true;
+                    document.getElementById('install-btn').disabled = false;
+                }
+            }
+        }
+
+        function updateAPIStatus(online) {
+            const indicator = document.getElementById('api-indicator');
+            const status = document.getElementById('api-status');
+            
+            if (online) {
+                indicator.className = 'status-indicator online';
+                status.textContent = 'Online';
+            } else {
+                indicator.className = 'status-indicator offline';
+                status.textContent = 'Offline';
+            }
+        }
+
+        function updateAgentStatus(installed) {
+            const indicator = document.getElementById('agent-indicator');
+            const status = document.getElementById('agent-status');
+            
+            if (installed) {
+                indicator.className = 'status-indicator online';
+                status.textContent = 'Installed';
+            } else {
+                indicator.className = 'status-indicator offline';
+                status.textContent = 'Not Installed';
+            }
+        }
+
+        // Check status on page load
+        window.addEventListener('load', () => {
+            logMessage('Installation test page loaded');
+            checkAPI();
+            setTimeout(() => checkAgent(), 1000);
+        });
+
+        // Auto-refresh API status every 5 seconds
+        setInterval(checkAPI, 5000);
+    </script>
+</body>
+</html>

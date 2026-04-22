@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SofAi Command Agent</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+    }
+    .container {
+      background: rgba(255,255,255,0.95);
+      color: #333;
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      max-width: 600px;
+      text-align: center;
+    }
+    h1 { font-size: 32px; margin-bottom: 10px; color: #667eea; }
+    .status {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      font-size: 18px;
+      margin: 20px 0;
+    }
+    .status-dot {
+      width: 12px;
+      height: 12px;
+      background: #4caf50;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    .info {
+      background: #f0f0f0;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+      text-align: left;
+    }
+    .info p {
+      margin: 8px 0;
+      font-size: 14px;
+    }
+    .info code {
+      background: #fff;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+    }
+    button {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+      margin: 10px;
+      transition: all 0.3s;
+    }
+    button:hover {
+      background: #764ba2;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>SofAi Command Agent</h1>
+    <div class="status">
+      <div class="status-dot"></div>
+      <span id="status-text">Active & Running</span>
+    </div>
+    
+    <div class="info">
+      <p><strong>WebSocket Server:</strong> <code id="ws-url">ws://localhost:5001</code></p>
+      <p><strong>API Status:</strong> <code id="api-status">Connected</code></p>
+      <p><strong>Version:</strong> <code>1.0.0</code></p>
+      <p>Your SofAi Command Agent is running and ready to accept voice & text commands from your browser.</p>
+    </div>
+
+    <div style="margin-top: 30px;">
+      <p style="color: #666; margin-bottom: 20px;">
+        Open http://localhost:3000 in your browser and enable Command Mode to start using voice commands.
+      </p>
+      <button onclick="minimizeWindow()">Minimize to Tray</button>
+      <button onclick="showHelp()">View Help</button>
+    </div>
+  </div>
+
+  <script>
+    // Check if running in Electron
+    if (window.electron) {
+      window.electron.getStatus().then(status => {
+        document.getElementById('api-status').textContent = status.running ? 'Online' : 'Offline';
+      });
+    }
+
+    function minimizeWindow() {
+      if (window.electron) {
+        window.electron.minimize();
+      }
+    }
+
+    function showHelp() {
+      alert(`SofAi Command Agent Help:
+
+1. Open http://localhost:3000 in your browser
+2. Click the ⚙️ button to enable Command Mode
+3. Say or type commands like:
+   - "open notepad"
+   - "open calculator"
+   - "open chrome"
+
+The agent will execute them safely on your system.`);
+    }
+  </script>
+</body>
+</html>
