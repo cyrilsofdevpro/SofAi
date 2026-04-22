@@ -13,10 +13,6 @@ body {
   overflow: hidden;
   display: flex;
 }
-  overflow: hidden;
-  height: 100vh;
-  width: 100vw;
-}
 
 #root {
   height: 100%;

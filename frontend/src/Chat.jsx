@@ -403,109 +403,91 @@ export default function Chat() {
   };
 
   useEffect(() => {
-    const savedUser = localStorage.getItem('user');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-      setIsLoggedIn(true);
-      setShowAuthPage(false);
-    } else {
-      setShowAuthPage(true);
-    }
-    
-    // Load conversations from localStorage only for logged-in users
-    const savedConversations = localStorage.getItem('conversations');
-    if (savedConversations && savedUser) {
-      const convs = JSON.parse(savedConversations);
-      setConversations(convs);
-      
-      // Load the most recent conversation
-      if (convs.length > 0) {
-        const mostRecent = convs[0];
-        setCurrentConversationId(mostRecent.id);
-        setMessages(mostRecent.messages);
+    try {
+      const savedUser = localStorage.getItem('user');
+      if (savedUser) {
+        setUser(JSON.parse(savedUser));
+        setIsLoggedIn(true);
+        setShowAuthPage(false);
+      } else {
+        setShowAuthPage(true);
       }
-    } else {
-      // Create a new conversation if none exist
-      createNewConversation();
-    }
-
-    // Initialize Web Speech API with optimized settings for sensitivity and speed
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (SpeechRecognition) {
-      recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = true;
-      recognitionRef.current.interimResults = true;
-      recognitionRef.current.maxAlternatives = 1;
-      recognitionRef.current.lang = 'en-US';
-
-      recognitionRef.current.onstart = () => {
-        setIsRecording(true);
-      };
-
-      recognitionRef.current.onend = () => {
-        setIsRecording(false);
-      };
-
-      recognitionRef.current.onresult = (event) => {
-        let interimTranscript = '';
-        let finalTranscript = '';
-
-        // Process all new results from the event
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          const transcript = event.results[i][0].transcript;
-          
-          // Get confidence level (0-1)
-          const confidence = event.results[i][0].confidence;
-
-          if (event.results[i].isFinal) {
-            // Use transcripts with high confidence immediately
-            if (confidence > 0.5) {
-              finalTranscript += transcript + ' ';
-            }
-          } else {
-            // Show interim results in real-time for faster feedback
-            interimTranscript += transcript;
-          }
+      
+      // Load conversations from localStorage only for logged-in users
+      const savedConversations = localStorage.getItem('conversations');
+      if (savedConversations && savedUser) {
+        const convs = JSON.parse(savedConversations);
+        setConversations(convs);
+        
+        // Load the most recent conversation
+        if (convs.length > 0) {
+          const mostRecent = convs[0];
+          setCurrentConversationId(mostRecent.id);
+          setMessages(mostRecent.messages);
         }
+      }
 
-        // Update input with interim results immediately for real-time feedback
-        if (interimTranscript && !finalTranscript) {
-          setInput(prev => {
-            const trimmedPrev = prev.trim();
-            // Only update if interim is different to avoid duplicate appending
-            if (!trimmedPrev.endsWith(interimTranscript.trim())) {
-              return trimmedPrev + ' ' + interimTranscript;
+      // Initialize Web Speech API with error handling
+      try {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (SpeechRecognition) {
+          recognitionRef.current = new SpeechRecognition();
+          recognitionRef.current.continuous = true;
+          recognitionRef.current.interimResults = true;
+          recognitionRef.current.maxAlternatives = 1;
+          recognitionRef.current.lang = 'en-US';
+
+          recognitionRef.current.onstart = () => {
+            setIsRecording(true);
+          };
+
+          recognitionRef.current.onend = () => {
+            setIsRecording(false);
+          };
+
+          recognitionRef.current.onresult = (event) => {
+            let interimTranscript = '';
+            let finalTranscript = '';
+
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+              const transcript = event.results[i][0].transcript;
+              const confidence = event.results[i][0].confidence;
+
+              if (event.results[i].isFinal) {
+                if (confidence > 0.5) {
+                  finalTranscript += transcript + ' ';
+                }
+              } else {
+                interimTranscript += transcript;
+              }
             }
-            return prev;
-          });
-        } else if (finalTranscript) {
-          // Append final transcript and remove interim
-          setInput(prev => {
-            const trimmedPrev = prev.trim();
-            // Remove interim text and add final
-            const cleanText = trimmedPrev.replace(/\s+$/, '');
-            return cleanText ? cleanText + ' ' + finalTranscript.trim() : finalTranscript.trim();
-          });
-        }
-      };
 
-      recognitionRef.current.onerror = (event) => {
-        console.error('Speech recognition error:', event.error);
-        // Auto-restart on certain errors for continuous listening
-        if (event.error === 'no-speech' || event.error === 'audio-capture') {
-          console.log('Restarting speech recognition...');
-          setTimeout(() => {
-            if (recognitionRef.current && isRecording) {
-              recognitionRef.current.start();
+            if (interimTranscript && !finalTranscript) {
+              setInput(prev => {
+                const trimmedPrev = prev.trim();
+                if (!trimmedPrev.endsWith(interimTranscript.trim())) {
+                  return trimmedPrev + ' ' + interimTranscript;
+                }
+                return prev;
+              });
+            } else if (finalTranscript) {
+              setInput(prev => {
+                const trimmedPrev = prev.trim();
+                const cleanText = trimmedPrev.replace(/\s+$/, '');
+                return cleanText ? cleanText + ' ' + finalTranscript.trim() : finalTranscript.trim();
+              });
             }
-          }, 500);
-        }
-      };
+          };
 
-      // Initialize wake word detection
-      setTimeout(() => {
-        initializeWakeWordDetection();
-      }, 1000);
+          recognitionRef.current.onerror = (event) => {
+            console.error('Speech recognition error:', event.error);
+          };
+        }
+      } catch (speechErr) {
+        console.warn('Speech recognition not available:', speechErr);
+      }
+    } catch (error) {
+      console.error('Chat initialization error:', error);
     }
   }, []);
 
