@@ -96,6 +96,10 @@ def _is_identity_question(text: str) -> bool:
     return False
 
 
+# Initialize models dictionary
+models = {}
+
+
 @app.on_event("startup")
 async def startup_event():
     global models
